@@ -1,0 +1,504 @@
+<html>
+  <head>
+    <script
+      type="text/javascript"
+      src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"
+    ></script>
+
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3"
+      crossorigin="anonymous"
+    />
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p"
+      crossorigin="anonymous"
+    ></script>
+
+    <style type="text/css">
+      #mynetwork {
+        width: 100%;
+        height: 50vh;
+        border: 1px solid olive;
+      }
+
+      button {
+        cursor: pointer;
+      }
+      button:disabled {
+        cursor: not-allowed;
+      }
+
+      .header {
+        height: 2rem;
+        font-size: 1.2rem;
+        width: 5rem;
+        text-align: center;
+        background-color: rgb(51, 236, 174);
+      }
+      .red-circle {
+        border: 2px solid red;
+        border-radius: 50%;
+
+        display: inline-block;
+        height: 1.5rem;
+        width: 1.5rem;
+      }
+      .value {
+        height: 2rem;
+        font-size: 1.1rem;
+        width: 5rem;
+        text-align: center;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        grid-gap: 2rem;
+      }
+
+      input {
+        width: 3.25rem;
+      }
+
+      #input-form {
+        text-align: center;
+      }
+      table {
+        margin: auto;
+      }
+    </style>
+  </head>
+
+  <body>
+    <h1 style="text-align: center; margin-bottom: 2rem">
+      Cycle Elimination Algorithm
+    </h1>
+
+    <div class="grid">
+      <form name="calcf" id="input-form">
+        <table>
+          <tr>
+            <td valign="top">
+              <div
+                class="panel"
+                style="display: inline-block; vertical-align: text-top"
+              >
+                <div
+                  id="sectitle"
+                  style="
+                    text-align: center;
+                    font-size: 1.75rem;
+                    font-weight: 500;
+                  "
+                >
+                  Valuation Matrix
+                </div>
+
+                <table>
+                  <tr>
+                    <td align="center">Number of agents</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td colspan="2">Number of Goods</td>
+                  </tr>
+
+                  <tr>
+                    <td align="center">
+                      <input
+                        type="number"
+                        name="arow"
+                        value="4"
+                        class="in3char"
+                        min="1"
+                        id="rowsel"
+                        max="10"
+                        onchange="updateInput();"
+                        required
+                      />
+                    </td>
+                    <td>
+                      <div
+                        class="arrow-up"
+                        onClick="addRemove('row', 'add');"
+                      ></div>
+                      <div style="height: 5px"></div>
+                      <div
+                        class="arrow-down"
+                        onClick="addRemove('row', 'remove');;"
+                      ></div>
+                    </td>
+                    <td class="verybigtext">&nbsp; &#215;</td>
+                    <td align="center">
+                      <input
+                        type="number"
+                        name="acolumn"
+                        value="4"
+                        class="in3char"
+                        min="1"
+                        id="colsel"
+                        max="10"
+                        onchange="updateInput()"
+                        required
+                      />
+                    </td>
+                    <td>
+                      <div
+                        class="arrow-left"
+                        onClick="addRemove('column', 'remove');"
+                      ></div>
+                      <div
+                        class="arrow-right"
+                        onClick="addRemove('column', 'add');"
+                      ></div>
+                    </td>
+                  </tr>
+                </table>
+
+                <div id="minputa"></div>
+
+                <div style="text-align: center" id="txtbtn">
+                  <a href="#" onClick="return popValue('');">Clear</a>
+                  <a href="#" onClick="return popValue(0);">All 0</a>
+                  <a href="#" onClick="return popValue(1);">All 1</a>
+                  <a href="#" onClick="return popValue('r');">Random</a>
+                </div>
+              </div>
+            </td>
+          </tr>
+        </table>
+        <button type="submit">Submit</button>
+
+        <table id="allocation-table" style="margin-top: 1rem"></table>
+      </form>
+
+      <div id="graph-container" style="padding-right: 0.5rem">
+        <div id="mynetwork"></div>
+        <div style="text-align: center">
+          <button
+            onclick="startAnimation()"
+            id="startAnimationButton"
+            style="margin-right: 0.4rem; margin-top: 0.75rem"
+          >
+            Start
+          </button>
+          <button id="pauseResumeButton" disabled>Pause</button>
+        </div>
+        <div id="status-text"></div>
+
+        <p style="text-align: center; margin-top: 0.6rem">
+          <button onclick="window.location.reload()">Start Again</button>
+        </p>
+      </div>
+    </div>
+
+    <script type="text/javascript" src="cycle2.js"></script>
+    <script type="text/javascript">
+      var matrixa = new Array(10);
+      for (var i = 0; i < 10; i++) {
+        matrixa[i] = new Array(10);
+        for (var j = 0; j < 10; j++) {
+          matrixa[i][j] = "";
+        }
+      }
+      function addRemove(arfield, arop) {
+        var arFieldName = "a";
+        if (arfield == "row") {
+          arFieldName += "row";
+        } else {
+          arFieldName += "column";
+        }
+        eval("var thisField = document.calcf." + arFieldName);
+        var thisValue = thisField.value;
+        if (arop == "add") thisValue++;
+        if (arop == "remove") thisValue--;
+        if (thisValue < 1) thisValue = 1;
+        if (thisValue > 10) thisValue = 10;
+        thisField.value = thisValue;
+        readInput();
+        updateInput();
+        return false;
+      }
+      function readInput() {
+        for (var i = 0; i < 10; i++) {
+          for (var j = 0; j < 10; j++) {
+            eval("var thisField = document.calcf." + "a" + i + j);
+            if (!(thisField === undefined)) {
+              matrixa[i][j] = thisField.value;
+            }
+          }
+        }
+      }
+      function updateInput() {
+        var rowAmt = document.getElementById("rowsel").value;
+        var columnAmt = document.getElementById("colsel").value;
+        if (rowAmt < 1) {
+          rowAmt = 1;
+          rowField.value = rowAmt;
+        }
+        if (rowAmt > 10) {
+          rowAmt = 10;
+          rowField.value = rowAmt;
+        }
+        if (columnAmt < 1) {
+          columnAmt = 1;
+          columnField.value = columnAmt;
+        }
+        if (columnAmt > 10) {
+          columnAmt = 10;
+          columnField.value = columnAmt;
+        }
+        var outHMTL = "<table>";
+        for (var i = 0; i < rowAmt; i++) {
+          outHMTL += "<tr>";
+          for (var j = 0; j < columnAmt; j++) {
+            outHMTL +=
+              '<td><input type="text" class="matrix-input" name="a' +
+              i +
+              j +
+              '" value="' +
+              matrixa[i][j] +
+              '" class="in4char"></td>';
+          }
+          outHMTL += "</tr>";
+        }
+        outHMTL += "</table>";
+        document.getElementById("minput" + "a").innerHTML = outHMTL;
+      }
+      function popValue(mtype) {
+        for (var i = 0; i < 10; i++) {
+          for (var j = 0; j < 10; j++) {
+            var thisVal = mtype;
+            if (mtype == "r") thisVal = Math.floor(Math.random() * 10);
+            eval("var thisField = document.calcf." + "a" + i + j);
+            matrixa[i][j] = thisVal;
+            if (!(thisField === undefined)) thisField.value = thisVal;
+          }
+        }
+        return false;
+      }
+      updateInput();
+
+      const form = document.getElementById("input-form");
+      form.addEventListener("submit", (e) => {
+        e.preventDefault();
+
+        let n_value = document.getElementById("rowsel").value;
+        let m_value = document.getElementById("colsel").value;
+
+        n = Number(n_value);
+        m = Number(m_value);
+
+        valuation = Array.from(Array(n)).map((i) =>
+          Array.from(Array(m)).map((i) => 0)
+        );
+
+        for (let i = 0; i < n; i++) {
+          for (let j = 0; j < m; j++) {
+            const inputValue = document.getElementsByName(`a${i}${j}`)[0].value;
+            valuation[i][j] = Number(inputValue);
+          }
+        }
+
+        const graphContainer = document.getElementById("graph-container");
+        graphContainer.hidden = false;
+
+        nodesList = [];
+        for (let i = 0; i < n; i++) {
+          nodesList.push({ id: i + 1, label: `A${i + 1}` });
+        }
+
+        generateStates();
+        console.log(states);
+
+        edgesList = states.map((state) => toEdges(state));
+
+        allocationTable.innerHTML = "";
+
+        showTable(0, true);
+
+        started = false;
+
+        loadAnimation(edgesList)
+          .then(() => console.log("Animation completed!"))
+          .catch((err) => console.log("Error:", err));
+
+        // form.hidden = true;
+        let inputs = document.getElementsByTagName("input");
+        for (let input of inputs) input.disabled = true;
+      });
+
+      // ---------------------------------------------------------------
+
+      const allocationTable = document.getElementById("allocation-table");
+
+      const startAnimationButton = document.getElementById(
+        "startAnimationButton"
+      );
+      const pauseResumeButton = document.getElementById("pauseResumeButton");
+
+      let started = false;
+
+      let paused = false;
+      const pauseResumeAnimation = (e) => {
+        paused = !paused;
+        e.target.innerHTML = paused ? "Resume" : "Pause";
+      };
+      pauseResumeButton.addEventListener("click", pauseResumeAnimation);
+
+      const statusDiv = document.getElementById("status-text");
+
+      // generateStates();
+      // console.log(states);
+
+      // const nodesList = [
+      //     {id: 1, label: "A1"},
+      //     {id: 2, label: "A2"},
+      //     {id: 3, label: "A3"}
+      // ];
+      let nodesList = [];
+
+      let edgesList = [];
+
+      // const showData = (edgesList) => {
+      //     // create an array with nodes
+      //     // var nodes = new vis.DataSet([
+      //     //     {id: 1, label: 'Node 1'},
+      //     //     {id: 2, label: 'Node 2'},
+      //     //     {id: 3, label: 'Node 3'},
+      //     //     {id: 4, label: 'Node 4'},
+      //     //     {id: 5, label: 'Node 5'}
+      //     // ]);
+
+      //     // create an array with edges
+      //     // var edges = new vis.DataSet([
+      //     //     {from: 1, to: 3},
+      //     //     {from: 1, to: 2},
+      //     //     {from: 2, to: 4},
+      //     //     {from: 2, to: 5}
+      //     // ]);
+      // }
+
+      const sleep = (ms) => {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+      };
+
+      const showTable = (stepIndex, showDummyTable) => {
+        const { allocation, adj } = states[stepIndex];
+
+        let tableData = "";
+
+        tableData += "<tr><td></td>";
+        for (let i = 0; i < m; i++) {
+          tableData += `
+            <td class="header">g${i + 1}</td>
+          `;
+        }
+        tableData += "</tr>";
+
+        for (let i = 0; i < n; i++) {
+          tableData += `<tr><td class="header">a${i + 1}</td>`;
+          for (let j = 0; j < m; j++) {
+            if (showDummyTable) {
+              tableData += `<td class="value">${valuation[i][j]}</td>`;
+            } else {
+              const showRedCircle = allocation[i].includes(j);
+              tableData += `<td class="value"><div ${
+                showRedCircle ? `class="red-circle"` : ""
+              }>${valuation[i][j]}</div></td>`;
+            }
+          }
+          tableData += "</tr>";
+        }
+
+        allocationTable.innerHTML = tableData;
+      };
+
+      const loadAnimation = async (edgesList) => {
+        const nodesDataSet = new vis.DataSet(nodesList);
+        const edgesDataSet = new vis.DataSet([]);
+
+        // create a network
+        var container = document.getElementById("mynetwork");
+
+        // provide the data in the vis format
+        var data = {
+          nodes: nodesDataSet,
+          edges: edgesDataSet,
+        };
+
+        var options = {
+          edges: {
+            arrows: "to", // ,from',
+            color: "purple",
+            font: "14px arial #0400ff",
+            scaling: {
+              label: true,
+            },
+            shadow: false,
+            smooth: {
+              enabled: true,
+              type: "continuous",
+              roundness: 0,
+            },
+          },
+          nodes: {
+            color: "lightgreen",
+          },
+        };
+
+        // initialize your network!
+        var network = new vis.Network(container, data, options);
+
+        while (!started) await sleep(100);
+
+        let timeGap = 4; // in seconds
+        for (let k = 0; k < timeGap; k++) {
+          while (paused) await sleep(100);
+          statusDiv.innerHTML = `Animation starts in ${timeGap - k - 1}...`;
+          await sleep(1000);
+        }
+
+        for (let i = 0; i < edgesList.length; i++) {
+          while (paused) await sleep(100);
+
+          const edges = edgesList[i];
+          console.log(edges);
+          edgesDataSet.clear();
+          edgesDataSet.update(edges);
+          statusDiv.innerHTML = `Step ${i + 1}.`;
+
+          showTable(i);
+
+          let timeGap = 4; // in seconds
+          for (let k = 0; k < timeGap; k++) {
+            while (paused) await sleep(100);
+            statusDiv.innerHTML = `Step ${i + 1}. Next step in ${
+              timeGap - k - 1
+            }...`;
+            await sleep(1000);
+          }
+        }
+
+        statusDiv.innerHTML = "Animation completed!";
+        pauseResumeButton.disabled = true;
+
+        startAnimationButton.innerHTML = "Restart Animation";
+        startAnimationButton.disabled = false;
+
+        started = false;
+        loadAnimation(edgesList)
+          .then(() => console.log("Animation completed!"))
+          .catch((err) => console.log("Error:", err));
+      };
+
+      const startAnimation = () => {
+        startAnimationButton.disabled = true;
+        pauseResumeButton.disabled = false;
+        started = true;
+      };
+    </script>
+  </body>
+</html>
